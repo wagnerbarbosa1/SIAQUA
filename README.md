@@ -1,0 +1,1 @@
+Pipeline for extract, transform and evaluate baseline models, statistic models, tsfm's and tsfm's fine-tuned aplicated on water_demand dataset.
