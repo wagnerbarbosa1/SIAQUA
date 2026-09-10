@@ -22,4 +22,4 @@ def verify_timestamp(df : pd.DataFrame, timestamp : str):
 
     missing = expected.difference(df[timestamp])
 
-    return df
+    return df, missing

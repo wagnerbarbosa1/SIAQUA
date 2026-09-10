@@ -6,10 +6,9 @@ FILENAME = "brute_5min_1day_features.csv"
 TIMESTAMP = "timestamp"
 
 df = csv.read_csv(filename=FILENAME, data_type=TYPE_DATA)
-df = verify_inconsistent.verify_timestamp(df, TIMESTAMP)
+df, missing = verify_inconsistent.verify_timestamp(df, TIMESTAMP)
 
-
-
+print(missing)
 print(df)
 
 

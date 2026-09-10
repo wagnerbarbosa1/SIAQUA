@@ -5,7 +5,7 @@ import torch
 import os
 import datetime
 from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error, r2_score
-import matplotlib.pyplot as plt
+from siaqua.visualization.plots import line_graph
 
 
 
@@ -121,29 +121,6 @@ print("R2 : ", r21)
 print("MAE : ", mae1)
 print("MAPE : ", mape1)
 
-fig, ax = plt.subplots(figsize=(12, 6))
-plt.style.use('default')
-
-ax.plot(df_result["timestamp"], df_result["ytrue0"], color='#d3d3d3', alpha = 0.9, linewidth=1.0, label='Water_produced')
-
-ax.plot(df_result["timestamp"], df_result["yhat0"], color="#2554b9", linewidth=1.3, alpha=0.4, label='Chronos2')
-
-plt.title('Chronos2 x Water_produced', 
-          fontsize=16, loc='left', pad=20, color='#333333')
-
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-ax.spines['left'].set_color('#cccccc')
-ax.spines['bottom'].set_color('#cccccc')
-
-ax.tick_params(axis='both', colors='#666666')
-
-plt.legend(frameon=False, loc='upper left', fontsize=9)
-
-plt.grid(axis='y', linestyle='--', alpha=0.3)
-
-plt.tight_layout()
-
 output_models = "output_models"
 if not os.path.exists(output_models):
     os.makedirs(output_models)
@@ -165,7 +142,7 @@ timestamp = current_time.strftime("%Y-%m-%d-%H-%M-%S")
 
 graphs_file = os.path.join(output_models_chronos_graph, f"graph_chronos_{timestamp}")
 
-plt.savefig(graphs_file)
+line_graph(df_result, "Chronos2", "timestamp", graphs_file)
 
 
 output_metrics = "chronos_metrics_directory"
