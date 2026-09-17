@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from matplotlib import pyplot
 from siaqua.visualization.plots import linear_graph
 from siaqua.io.csv import read_csv, save_dataframe
 

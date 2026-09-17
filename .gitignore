@@ -6,6 +6,8 @@ data/interim/*
 !data/processed/.gitkeep
 !data/interim/.gitkeep
 
+notebooks/data_analyse.ipynb
+
 __pycache__
 __pycache__/*.py[cod]
 *.egg-info/

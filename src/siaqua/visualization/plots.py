@@ -9,7 +9,7 @@ EDA_GRAPH_FOLDER = PROJECT_ROOT / "eda_graphs"
 OUTPUT_MODELS_FOLDER = PROJECT_ROOT / "output_models"
 
 
-def _resolve_save_folder(output_type: Optional[str], model_name: Optional[str]) -> Optional[Path]:
+def _resolve_save_folder(output_type: str, model_name: Optional[str]) -> Optional[Path]:
     if output_type == "eda":
         return EDA_GRAPH_FOLDER
 
@@ -18,10 +18,7 @@ def _resolve_save_folder(output_type: Optional[str], model_name: Optional[str]) 
             raise ValueError("model_name é obrigatório quando output_type='output_models'")
         return OUTPUT_MODELS_FOLDER / f"output_{model_name}" / f"{model_name}_graph"
 
-    if output_type is None:
-        return None
-
-    raise ValueError("wrong output_type, set 'eda' or 'output_models' or None")
+    raise ValueError("wrong output_type, set 'eda' or 'output_models'")
 
 
 def linear_graph(
@@ -34,8 +31,6 @@ def linear_graph(
     title: Optional[str] = None,
     filename: str = "line_graph.png",
 ):
-    save_folder = _resolve_save_folder(output_type, model_name)
-
     df = df.copy()
     df[timestamp_col] = pd.to_datetime(df[timestamp_col])
 
@@ -59,7 +54,7 @@ def linear_graph(
 
     ax.set_title(
         title or f"{highlight_col} x {', '.join(compare_cols)}",
-        fontsize=16, loc="left", pad=20, color=NEUTRALS["dark"],
+        fontsize=16, loc="center", pad=10, color=NEUTRALS["dark"],
     )
 
     ax.spines["top"].set_visible(False)
@@ -72,10 +67,24 @@ def linear_graph(
     ax.legend(frameon=False, loc="upper left", fontsize=9)
 
     plt.tight_layout()
+
     if output_type is None:
         plt.show()
         return None
     
+    save_folder = _resolve_save_folder(output_type, model_name)
     save_folder.mkdir(parents=True, exist_ok=True)
     fig.savefig(save_folder / filename, dpi=150)
     plt.close(fig)
+
+def error_bar_graph(
+    df: pd.DataFrame,
+    timestamp_col: str,
+    highlight_col: str,
+    output_type: Optional[str] = None,
+    compare_cols: Sequence[str] = (),
+    model_name: Optional[str] = None,
+    title: Optional[str] = None,
+    filename: str = "line_graph.png",
+):
+    return None
