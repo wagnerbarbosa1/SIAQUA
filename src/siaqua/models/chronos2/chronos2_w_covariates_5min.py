@@ -38,7 +38,7 @@ class SlidingWindow:
 
             yield trainidxs, testidxs
     
-df = pd.read_csv("/home/wagner-barbosa/Documents/IC/zero_shot_models/src/data/brute_5min_1hour_features.csv")
+df = pd.read_csv("/home/wagner-barbosa/Documents/IC/siaqua/data/interim/interim_caj_5m1d.csv")
 df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_localize(None).astype("datetime64[ns]")
 
 pipeline = Chronos2Pipeline.from_pretrained(
@@ -49,9 +49,9 @@ pipeline = Chronos2Pipeline.from_pretrained(
 
 expanding_window_test = ExpandingWindow(
     n_samples=len(df),
-    trainw= (385*24*5), #o tamanho da janela inicial
-    step=(24*5), #passo
-    horizon=(2*24*5) #horizonte de previsao
+    trainw= (385*12), #o tamanho da janela inicial
+    step=(24*12), #passo
+    horizon=(2*24*12) #horizonte de previsao
 )
 
 resultsEW_val = dict(timestamp=[], ytrue0=[], ytrue1=[], yhat0=[], yhat1=[])
@@ -61,17 +61,6 @@ for i, (trainidxs, testidxs) in enumerate(expanding_window_test.split()):
     
     # Dados de treino
     context_df = df[trainidxs] 
-
-    print(context_df[["unique_id", "timestamp"]].head(20))
-
-    print("\nDtype:")
-    print(context_df["timestamp"].dtype)
-
-    print("\nUnique IDs:")
-    print(context_df["unique_id"].unique())
-
-    print("\nDiferenças:")
-    print(context_df["timestamp"].diff().value_counts().head(20))
 
     # Dados de validação
     y_t = df[testidxs]

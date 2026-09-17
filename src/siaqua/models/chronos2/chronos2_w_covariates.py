@@ -5,40 +5,12 @@ import torch
 import os
 import datetime
 from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error, r2_score
-from siaqua.visualization.plots import line_graph
+from siaqua.visualization.plots import linear_graph
+from siaqua.evaluation.metrics import deterministic_metrics
+from siaqua.evaluation.cross_validation import ExpandingWindow, SlidingWindow
 
-
-
-class ExpandingWindow:
-    def __init__(self, n_samples, trainw, step, horizon):
-        self.n_samples = n_samples
-        self.trainw = trainw
-        self.step = step
-        self.horizon = horizon
-
-    def split(self):
-        for k in range(self.trainw, self.n_samples - self.horizon + 1, self.step): #+1 só porque o range exclui o limite superior
-            #           k é o conjunto de treinamento
-            trainidxs = slice(0, k)
-            testidxs = slice(k, k + self.horizon)
-
-            yield trainidxs, testidxs
-
-class SlidingWindow:
-    def __init__(self, n_samples, trainw, step, horizon):
-        self.n_samples = n_samples
-        self.trainw = trainw
-        self.step = step
-        self.horizon = horizon
-
-    def split(self):
-        for k in range (self.trainw, self.n_samples - self.horizon + 1, self.step):
-            trainidxs = slice(k - self.trainw, k)
-            testidxs = slice(k, k + self.horizon)
-
-            yield trainidxs, testidxs
     
-df = pd.read_csv("/home/wagner-barbosa/Python_Learn/datasets/df_chronos2_10_covariates_no_repeat.csv")
+df = pd.read_csv("/home/wagner-barbosa/Documents/IC/siaqua/data/processed/joinville_processed_1day.csv")
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
 pipeline = Chronos2Pipeline.from_pretrained(
@@ -49,9 +21,9 @@ pipeline = Chronos2Pipeline.from_pretrained(
 
 expanding_window_test = ExpandingWindow(
     n_samples=len(df),
-    trainw= 385, #o tamanho da janela inicial
-    step=1, #passo
-    horizon=2 #horizonte de previsao
+    trainw= 385, #train window
+    step=1, #step
+    horizon=2 #forecast
 )
 
 resultsEW_val = dict(timestamp=[], ytrue0=[], ytrue1=[], yhat0=[], yhat1=[])
@@ -94,79 +66,71 @@ for i, (trainidxs, testidxs) in enumerate(expanding_window_test.split()):
 
     print(i)
 
-
 df_result = pd.DataFrame(resultsEW_val)
-print("NaNs por coluna:\n", df_result[["ytrue0", "yhat0", "ytrue1", "yhat1"]].isna().sum())
 
-#df_result["timestamp"] = df["timestamp"].iloc[expanding_window_test.trainw:] #aplicar logs para verificação de dimensionalidade do dataset
-#df_result["timestamp"] = pd.to_datetime(df_result["timestamp"])
+# Metrics
 
-rmse0 = round(np.sqrt(mean_squared_error(df_result["ytrue0"], df_result["yhat0"])), 4)
-mae0 = round(mean_absolute_error(df_result["ytrue0"], df_result["yhat0"]), 4)
-mape0 = round(mean_absolute_percentage_error(df_result["ytrue0"], df_result["yhat0"]), 4)
-r20 = round(r2_score(df_result["ytrue0"], df_result["yhat0"]), 4)
+metricas_dia1 = deterministic_metrics(df_result["ytrue0"], df_result["yhat0"])
 
-rmse1 = round(np.sqrt(mean_squared_error(df_result["ytrue1"].dropna(), df_result["yhat1"].dropna())), 4)
-mae1 = round(mean_absolute_error(df_result["ytrue1"].dropna(), df_result["yhat1"].dropna()), 4)
-mape1 = round(mean_absolute_percentage_error(df_result["ytrue1"].dropna(), df_result["yhat1"].dropna()), 4)
-r21 = round(r2_score(df_result["ytrue1"].dropna(), df_result["yhat1"].dropna()), 4)
+metricas_dia2 = deterministic_metrics(df_result["ytrue1"],df_result["yhat1"])
 
-print("RMSE : ", rmse0)
-print("R2 : ", r20)
-print("MAE : ", mae0)
-print("MAPE : ", mape0)
-
-print("\nRMSE : ", rmse1)
-print("R2 : ", r21)
-print("MAE : ", mae1)
-print("MAPE : ", mape1)
+# Output directories
 
 output_models = "output_models"
-if not os.path.exists(output_models):
-    os.makedirs(output_models)
+output_chronos = os.path.join(output_models, "output_chronos")
 
-output_chronos = "output_chronos"
-output_models_chronos = os.path.join(output_models, output_chronos)
-if not os.path.exists(output_models_chronos):
-    os.makedirs(output_models_chronos)
+output_graphs = os.path.join(output_chronos,"chronos_graph")
 
-output_chronos_graph = "chronos_graph"
-output_models_chronos_graph = os.path.join(output_models_chronos, output_chronos_graph)
+output_metrics = os.path.join(output_chronos,"chronos_metrics_directory")
 
-if not os.path.exists(output_models_chronos_graph):
-    os.makedirs(output_models_chronos_graph)
+output_forecast = os.path.join(output_chronos,"chronos_forecast")
 
-current_time = datetime.datetime.now()
+# Creating directories
 
-timestamp = current_time.strftime("%Y-%m-%d-%H-%M-%S")
+os.makedirs(output_graphs, exist_ok=True)
+os.makedirs(output_metrics, exist_ok=True)
+os.makedirs(output_forecast, exist_ok=True)
 
-graphs_file = os.path.join(output_models_chronos_graph, f"graph_chronos_{timestamp}")
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d")
 
-line_graph(df_result, "Chronos2", "timestamp", graphs_file)
+# Graphs
 
+graphs_file = os.path.join(output_graphs,f"graph_chronos_{timestamp}")
 
-output_metrics = "chronos_metrics_directory"
-output_models_chronos_metrics = os.path.join(output_models_chronos, output_metrics)
-if not os.path.exists(output_models_chronos_metrics):
-    os.makedirs(output_models_chronos_metrics)
+linear_graph(df_result,"Chronos2","timestamp", graphs_file)
 
-metrics_file = os.path.join(output_models_chronos_metrics, f"metrics_chronos_{timestamp}.csv")
+# Metrics
 
-with open(metrics_file, "w") as f: #with garante que eu abra e feche o arquivo
-    f.write("model,rmse0,mae0,mape0,r20,rmse1,mae1,mape1,r21,split\n")
+metrics_file = os.path.join(output_metrics,f"metrics_chronos_{timestamp}.csv")
 
-# Salva as metricas
-with open(metrics_file, "a") as f:
-    f.write(f"CHRONOS-EW,{rmse0},{mae0},{mape0},{r20},{rmse1},{mae1},{mape1},{r21},test\nEW-Parameters, step: {expanding_window_test.step}, " \
-            f"horizon: {expanding_window_test.horizon}, trainw_start: {expanding_window_test.trainw}, n_samples: {expanding_window_test.n_samples}")
+metrics_df = pd.DataFrame({
+    "model": ["CHRONOS-EW"],
 
-# CSV com ytrue e yhat
-output_dir2 = "chronos_forecast"
-output_models_chronos_forecast = os.path.join(output_models_chronos, output_dir2)
+    "rmse_day1": [metricas_dia1["rmse"]],
+    "mae_day1": [metricas_dia1["mae"]],
+    "mape_day1": [metricas_dia1["mape"]],
+    "r2_day1": [metricas_dia1["r2"]],
 
-if not os.path.exists(output_models_chronos_forecast):
-    os.makedirs(output_models_chronos_forecast)
+    "rmse_day2": [metricas_dia2["rmse"]],
+    "mae_day2": [metricas_dia2["mae"]],
+    "mape_day2": [metricas_dia2["mape"]],
+    "r2_day2": [metricas_dia2["r2"]],
 
-values_file = os.path.join(output_models_chronos_forecast, f"results_chronos_{timestamp}.csv")
+    "split": ["test"],
+
+    "step": [expanding_window_test.step],
+    "horizon": [expanding_window_test.horizon],
+    "trainw_start": [expanding_window_test.trainw],
+    "n_samples": [expanding_window_test.n_samples],
+})
+
+metrics_df.to_csv(
+    metrics_file,
+    index=False
+)
+
+# Saving file
+
+values_file = os.path.join(output_forecast,f"results_chronos_{timestamp}.csv")
 
 df_result.to_csv(values_file, index=False)
